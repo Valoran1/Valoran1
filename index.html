@@ -7,14 +7,26 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="chat-container">
-    <h1>Valoran</h1>
-    <div id="chat-log" class="chat-log"></div>
-    <form id="chat-form">
-      <input type="text" id="user-input" placeholder="Povej, kaj te žre..." autocomplete="off" required />
-      <button type="submit">Pošlji</button>
-    </form>
+  <div class="container">
+    <header>
+      <img src="assets/logo.png" alt="Valoran Logo" class="logo" />
+      <h1>Valoran</h1>
+      <h2>AI Brat za Moške</h2>
+    </header>
+
+    <main>
+      <div id="chat-log" class="chat-log"></div>
+      <form id="chat-form" class="chat-form">
+        <textarea
+          id="user-input"
+          placeholder="Vprašaj Valorana..."
+          rows="2"
+        ></textarea>
+        <button type="submit">Pošlji</button>
+      </form>
+    </main>
   </div>
+
   <script src="script.js"></script>
 </body>
 </html>
