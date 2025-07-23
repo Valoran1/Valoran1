@@ -1,47 +1,34 @@
-const { Configuration, OpenAIApi } = require('openai');
+const fetch = require("node-fetch");
 
 exports.handler = async function(event, context) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  const body = JSON.parse(event.body);
+  const { messages } = body;
+
   try {
-    const body = JSON.parse(event.body);
-    const userMessage = body.message;
-
-    if (!userMessage) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ error: 'Manjka vsebina sporočila.' })
-      };
-    }
-
-    const configuration = new Configuration({
-      apiKey: process.env.OPENAI_API_KEY,
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gpt-4o",
+        messages,
+        temperature: 0.7,
+      }),
     });
 
-    const openai = new OpenAIApi(configuration);
-
-    const response = await openai.createChatCompletion({
-      model: 'gpt-3.5-turbo',
-      messages: [{ role: 'user', content: userMessage }],
-    });
-
-    const reply = response?.data?.choices?.[0]?.message?.content;
-
-    if (!reply) {
-      console.log('⚠️ Ni odgovora:', response?.data);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Prazen odgovor iz OpenAI.' }),
-      };
-    }
-
+    const data = await response.json();
     return {
       statusCode: 200,
-      body: JSON.stringify({ reply }),
+      body: JSON.stringify({ reply: data.choices[0].message.content })
     };
-  } catch (err) {
-    console.error('💥 Napaka v funkciji:', err);
+  } catch (error) {
+    console.error("OpenAI API error:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: err.message }),
+      body: JSON.stringify({ reply: "Napaka: AI ni dosegljiv." })
     };
   }
 };
