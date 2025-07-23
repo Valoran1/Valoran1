@@ -4,47 +4,28 @@ const userInput = document.getElementById("user-input");
 
 const messages = [{
   role: "system",
-  content: `Ti si Valoran – AI brat, mentor in trener za moške. Tvoj ton je neposreden, stoičen in konkreten. Tvoj cilj je pomagati moškemu jasno, pogumno in učinkovito – brez ovinkarjenja.
+  content: `Ti si Valoran – AI brat in mentor za moške. Govoriš jasno, moško in neposredno.
 
-🧠 Vedno odgovarjaš v 3 delih:
-1. **Razumevanje**: najprej povzameš težavo uporabnika v 1–2 stavkih.
-2. **Poglobljeno vprašanje**: postaviš močno vprašanje, da dobiš več informacij ali usmeriš razmišljanje.
-3. **Jasen nasvet**: podaš konkreten korak ali strategijo. Ne pametuješ – usmerjaš.
+Vedno odgovarjaš v 3 fazah:
+1. Povzemi težavo v 1 stavku – pokaži razumevanje.
+2. Postavi eno globoko vprašanje – da razjasniš.
+3. Daj konkreten nasvet ali korak. Zaključi odločno (npr. “Greva?”, “Začneš danes.”)
 
-🧱 Slog:
-- Govoriš kot človek, ne kot AI.
-- Ne uporabljaš prazne empatije ali fraz kot “z veseljem ti pomagam”.
-- Govoriš kot brat, ki vidi potencial in ne išče izgovorov.
-- Vprašanje naj deluje kot izziv, ki zahteva iskren odgovor.
-- Zaključiš z akcijo: “Greva?”, “Jutri začneva.”, “To rešiš danes.”
+Ne uporabljaš prazne empatije. Govoriš kot starejši brat, ne kot AI.
 
-📌 Primer odgovora:
-Razumem – odlašaš in nimaš volje za treninge. To ti počasi žre samozavest in še dodatno zniža energijo.
-
-Povej mi: je problem v tem, da si zdelan že prej… ali da nimaš nobenega jasnega cilja, za katerega bi treniral?
-
-Ko to razčistiva, začneva z načrtom. Brez filozofije – konkretno. Greva?`
+Primer:
+Razumem – odlašaš s treningom in zgubljaš zagon.  
+Kaj te najbolj zlomi – utrujenost, ali nimaš cilja?  
+Začneva s 15 minutami doma. Brez filozofije. Greva?`
 }];
 
-function appendMessage(role, text) {
+function appendMessage(role, text = "") {
   const div = document.createElement("div");
   div.classList.add("message", role);
-  div.innerHTML = text.replace(/\n/g, "<br>");
+  div.innerHTML = text;
   chatLog.appendChild(div);
   chatLog.scrollTop = chatLog.scrollHeight;
-}
-
-function showLoading() {
-  const loading = document.createElement("div");
-  loading.classList.add("message", "bot", "loading");
-  loading.textContent = "Valoran razmišlja...";
-  chatLog.appendChild(loading);
-  chatLog.scrollTop = chatLog.scrollHeight;
-}
-
-function removeLoading() {
-  const loading = document.querySelector(".message.bot.loading");
-  if (loading) loading.remove();
+  return div;
 }
 
 async function sendMessage(message) {
@@ -52,7 +33,8 @@ async function sendMessage(message) {
   userInput.value = "";
   messages.push({ role: "user", content: message });
 
-  showLoading();
+  const botDiv = appendMessage("bot", "<span class='cursor'>_</span>");
+  const cursor = botDiv.querySelector(".cursor");
 
   try {
     const response = await fetch("/.netlify/functions/chat", {
@@ -61,18 +43,29 @@ async function sendMessage(message) {
       body: JSON.stringify({ messages })
     });
 
-    const data = await response.json();
-    removeLoading();
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let result = "";
 
-    if (data.reply) {
-      messages.push({ role: "assistant", content: data.reply });
-      appendMessage("bot", data.reply);
-    } else {
-      appendMessage("bot", "AI ni odgovoril. Poskusi znova.");
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const jsonMatch = chunk.match(/{.*}/s);
+      if (jsonMatch) {
+        const data = JSON.parse(jsonMatch[0]);
+        if (data.reply) {
+          result += data.reply;
+          botDiv.innerHTML = result.replace(/\n/g, "<br>") + `<span class='cursor'>_</span>`;
+        }
+      }
     }
+
+    messages.push({ role: "assistant", content: result });
+    botDiv.innerHTML = result.replace(/\n/g, "<br>");
   } catch (error) {
-    removeLoading();
-    appendMessage("bot", "Napaka v komunikaciji. Poskusi znova.");
+    botDiv.innerHTML = "Napaka v komunikaciji.";
   }
 }
 
@@ -90,4 +83,5 @@ userInput.addEventListener("keydown", (e) => {
     chatForm.dispatchEvent(new Event("submit"));
   }
 });
+
 
