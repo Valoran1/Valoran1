@@ -33,7 +33,6 @@ exports.handler = async function(event, context) {
       statusCode: 200,
       body: JSON.stringify({ reply: data.choices[0].message.content })
     };
-
   } catch (error) {
     console.error("Function error:", error.message);
     return {
@@ -42,3 +41,4 @@ exports.handler = async function(event, context) {
     };
   }
 };
+
