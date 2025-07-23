@@ -1,13 +1,7 @@
 const fetch = require("node-fetch");
 
-exports.handler = async function(event, context) {
+exports.handler = async function(event) {
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ reply: "Napaka: API ključ ni nastavljen." })
-    };
-  }
 
   try {
     const body = JSON.parse(event.body);
@@ -21,31 +15,21 @@ exports.handler = async function(event, context) {
       },
       body: JSON.stringify({
         model: "gpt-4o",
-        messages,
-        temperature: 0.7
+        messages: messages.slice(-7),
+        temperature: 0.7,
+        stream: true
       })
     });
 
-    const data = await response.json();
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
 
-    if (!data.choices || !data.choices[0]) {
-      return {
-        statusCode: 200,
-        body: JSON.stringify({ reply: "AI ni odgovoril. Poskusi ponovno." })
-      };
-    }
+    let fullText = "";
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ reply: data.choices[0].message.content })
-    };
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-  } catch (err) {
-    console.error("API napaka:", err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ reply: "Napaka: AI trenutno ni dosegljiv." })
-    };
-  }
-};
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split("\n").filter(line => line.trim().startsWith("data:
 
