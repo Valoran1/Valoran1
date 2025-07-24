@@ -1,9 +1,9 @@
 {
   "name": "valoran-chat",
   "version": "1.0.0",
-  "main": "index.js",
-  "license": "MIT",
+  "description": "Valoran GPT-4o Chatbot",
+  "main": "chat.js",
   "dependencies": {
-    "openai": "^4.20.0"
+    "openai": "^4.30.0"
   }
 }
