@@ -1,16 +1,18 @@
-const chatbox = document.getElementById("chatbox");
-const userInput = document.getElementById("userInput");
+const chatLog = document.getElementById("chat-log");
+const chatForm = document.getElementById("chat-form");
+const userInput = document.getElementById("user-input");
 
-function appendMessage(sender, message) {
-  const msgDiv = document.createElement("div");
-  msgDiv.className = sender;
-  msgDiv.innerText = message;
-  chatbox.appendChild(msgDiv);
-  chatbox.scrollTop = chatbox.scrollHeight;
-  return msgDiv;
+function appendMessage(sender, text) {
+  const div = document.createElement("div");
+  div.className = `message ${sender}`;
+  div.textContent = text;
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
+  return div;
 }
 
-async function sendMessage() {
+chatForm.addEventListener("submit", async (e) => {
+  e.preventDefault();
   const message = userInput.value.trim();
   if (!message) return;
 
@@ -18,42 +20,31 @@ async function sendMessage() {
   userInput.value = "";
 
   const responseDiv = appendMessage("bot", "...");
-  
+
   const response = await fetch("/.netlify/functions/chat", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message }),
   });
 
   if (!response.ok || !response.body) {
-    responseDiv.innerText = "Napaka pri pridobivanju odgovora.";
+    responseDiv.textContent = "Napaka pri pridobivanju odgovora.";
     return;
   }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder("utf-8");
-  let done = false;
-  let fullText = "";
+  let fullResponse = "";
 
-  responseDiv.innerText = "";
+  responseDiv.textContent = "";
 
-  while (!done) {
-    const { value, done: doneReading } = await reader.read();
-    done = doneReading;
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
     const chunk = decoder.decode(value);
-    fullText += chunk;
-    responseDiv.innerText = fullText;
-    chatbox.scrollTop = chatbox.scrollHeight;
-  }
-}
-
-// Pošlji s klikom Enter
-userInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
+    fullResponse += chunk;
+    responseDiv.textContent = fullResponse;
+    chatLog.scrollTop = chatLog.scrollHeight;
   }
 });
 
