@@ -28,60 +28,38 @@ function appendMessage(role, text = "") {
   return div;
 }
 
-async function sendMessage(message) {
+async function sendMessage() {
+  const input = document.getElementById("user-input");
+  const message = input.value.trim();
+  if (!message) return;
+
   appendMessage("user", message);
-  userInput.value = "";
-  messages.push({ role: "user", content: message });
+  input.value = "";
 
-  const botDiv = appendMessage("bot", "<span class='cursor'>_</span>");
-  const cursor = botDiv.querySelector(".cursor");
+  const responseElement = appendMessage("bot", "⏳");
 
-  try {
-    const response = await fetch("/.netlify/functions/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages })
-    });
+  const res = await fetch("/.netlify/functions/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message })
+  });
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let result = "";
+  if (!res.body) {
+    responseElement.textContent = "❌ Napaka v odgovoru.";
+    return;
+  }
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let fullText = "";
 
-      const chunk = decoder.decode(value);
-      const jsonMatch = chunk.match(/{.*}/s);
-      if (jsonMatch) {
-        const data = JSON.parse(jsonMatch[0]);
-        if (data.reply) {
-          result += data.reply;
-          botDiv.innerHTML = result.replace(/\n/g, "<br>") + `<span class='cursor'>_</span>`;
-        }
-      }
-    }
-
-    messages.push({ role: "assistant", content: result });
-    botDiv.innerHTML = result.replace(/\n/g, "<br>");
-  } catch (error) {
-    botDiv.innerHTML = "Napaka v komunikaciji.";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    const chunk = decoder.decode(value, { stream: true });
+    fullText += chunk;
+    responseElement.textContent = fullText;
   }
 }
-
-chatForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const message = userInput.value.trim();
-  if (message) {
-    sendMessage(message);
-  }
-});
-
-userInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    chatForm.dispatchEvent(new Event("submit"));
-  }
-});
 
 
